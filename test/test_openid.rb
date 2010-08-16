@@ -1,6 +1,7 @@
 require 'test/unit'
 require 'net/http'
 
+require 'rubygems'
 require 'rack'
 require 'rack/openid'
 require 'rack/openid/simple_auth'
@@ -95,6 +96,44 @@ class TestHeader < Test::Unit::TestCase
     assert_equal({},
       Rack::OpenID.parse_header('Realm="Example"'))
   end
+
+  def test_build_header_with_deep_hash
+    header = Rack::OpenID.build_header(:identity => "http://example.com/", :oauth => {
+      :consumer => 'consumer_key', :scope => 'scope1'
+    })
+    assert_match(/OpenID /, header)
+    assert_match(/identity="http:\/\/example\.com\/"/, header)
+    assert_match(/oauth\[consumer\]="consumer_key"/, header)
+    assert_match(/oauth\[scope\]="scope1"/, header)
+
+    header = Rack::OpenID.build_header(:identity => "http://example.com/", :oauth => {
+      :consumer => 'consumer_key', :scope => 'scope1,scope2'
+    })
+    assert_match(/OpenID /, header)
+    assert_match(/identity="http:\/\/example\.com\/"/, header)
+    assert_match(/oauth\[consumer\]="consumer_key"/, header)
+    assert_match(/oauth\[scope\]="scope1,scope2"/, header)
+
+    header = Rack::OpenID.build_header(:identity => "http://example.com/", :oauth => {
+      :consumer => 'consumer_key', :scope => ['scope1', 'scope2']
+    })
+    assert_match(/OpenID /, header)
+    assert_match(/identity="http:\/\/example\.com\/"/, header)
+    assert_match(/oauth\[consumer\]="consumer_key"/, header)
+    assert_match(/oauth\[scope\]="scope1,scope2"/, header)
+  end
+
+  def test_parse_header_with_deep_hash
+    assert_equal(
+      {"identity" => "http://example.com/", "oauth" => {"consumer" => "consumer_key", "scope" => "scope1"}},
+      Rack::OpenID.parse_header('OpenID identity="http://example.com/", oauth[consumer]="consumer_key", oauth[scope]="scope1"')
+    )
+    assert_equal(
+      {"identity" => "http://example.com/", "oauth" => {"consumer" => "consumer_key", "scope" => ["scope1", "scope2"]}},
+      Rack::OpenID.parse_header('OpenID identity="http://example.com/", oauth[consumer]="consumer_key", oauth[scope]="scope1,scope2"')
+    )
+  end
+
 end
 
 module RackTestHelpers
@@ -193,6 +232,18 @@ class TestOpenID < Test::Unit::TestCase
     @app = app(
       :required => ['http://axschema.org/namePerson/friendly', 'http://axschema.org/contact/email'],
       :optional => 'http://axschema.org/namePerson')
+    process('/', :method => 'GET')
+    follow_redirect!
+    assert_equal 200, @response.status
+    assert_equal 'GET', @response.headers['X-Method']
+    assert_equal '/', @response.headers['X-Path']
+    assert_equal 'success', @response.body
+  end
+
+  def test_with_oauth
+    @app = app(
+      :oauth => {:consumer => 'consumer_key', :scope => 'scope1,scope2'}
+    )
     process('/', :method => 'GET')
     follow_redirect!
     assert_equal 200, @response.status

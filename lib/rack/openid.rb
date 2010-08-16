@@ -5,6 +5,7 @@ require 'openid'
 require 'openid/consumer'
 require 'openid/extensions/sreg'
 require 'openid/extensions/ax'
+require 'openid/extensions/oauth'
 
 module Rack #:nodoc:
   # A Rack middleware that provides a more HTTPish API around the
@@ -23,12 +24,20 @@ module Rack #:nodoc:
     #     #=> OpenID identifier="http://josh.openid.com/"
     def self.build_header(params = {})
       'OpenID ' + params.map { |key, value|
-        if value.is_a?(Array)
-          "#{key}=\"#{value.join(',')}\""
-        else
-          "#{key}=\"#{value}\""
-        end
+        build_header_param(key, value)
       }.join(', ')
+    end
+
+    def self.build_header_param(key, value)
+      if value.is_a?(Array)
+        "#{key}=\"#{value.join(',')}\""
+      elsif value.is_a?(Hash)
+        value.map do |k, v|
+          build_header_param("#{key}[#{k}]", v)
+        end
+      else
+        "#{key}=\"#{value}\""
+      end
     end
 
     # Helper method for parsing "WWW-Authenticate" header values into
@@ -45,7 +54,14 @@ module Rack #:nodoc:
           value = value.join('=')
           value.gsub!(/^\"/, '').gsub!(/\"$/, "")
           value = value.split(',')
-          params[key] = value.length > 1 ? value : value.first
+          parent_key, sub_key = key.scan(/^(.+)\[(.+)\]$/).flatten
+          _value_ = value.length > 1 ? value : value.first
+          if parent_key && sub_key
+            params[parent_key] ||= {}
+            params[parent_key][sub_key] = _value_
+          else
+            params[key] = _value_
+          end
         }
       end
       params
@@ -121,6 +137,7 @@ module Rack #:nodoc:
           oidreq = consumer.begin(identifier)
           add_simple_registration_fields(oidreq, params)
           add_attribute_exchange_fields(oidreq, params)
+          add_oauth_fields(oidreq, params)
           url = open_id_redirect_url(req, oidreq, params["trust_root"], params["return_to"], params["method"])
           return redirect_to(url)
         rescue ::OpenID::OpenIDError, Timeout::Error => e
@@ -238,6 +255,14 @@ module Rack #:nodoc:
         optional.each { |field| axreq.add(::OpenID::AX::AttrInfo.new(field, nil, false)) }
 
         oidreq.add_extension(axreq)
+      end
+
+      def add_oauth_fields(oidreq, fields)
+        return unless fields['oauth'] && fields['oauth']['consumer']
+        fields['oauth']['scope'] = Array(fields['oauth']['scope']).join(',')
+        oauthreq = ::OpenID::OAuth::Request.new fields['oauth']['consumer'], fields['oauth']['scope']
+
+        oidreq.add_extension(oauthreq)
       end
 
       def default_store
