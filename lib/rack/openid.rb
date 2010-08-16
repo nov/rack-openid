@@ -5,7 +5,13 @@ require 'openid'
 require 'openid/consumer'
 require 'openid/extensions/sreg'
 require 'openid/extensions/ax'
-require 'openid/extensions/oauth'
+
+if ::OpenID::VERSION >= '2.1.8'
+  require 'openid/extensions/oauth'
+  OPENID_GEM_WITH_OAUTH_SUPPORT = true
+else
+  OPENID_GEM_WITH_OAUTH_SUPPORT = false
+end
 
 module Rack #:nodoc:
   # A Rack middleware that provides a more HTTPish API around the
@@ -137,7 +143,7 @@ module Rack #:nodoc:
           oidreq = consumer.begin(identifier)
           add_simple_registration_fields(oidreq, params)
           add_attribute_exchange_fields(oidreq, params)
-          add_oauth_fields(oidreq, params)
+          add_oauth_fields(oidreq, params) if OPENID_GEM_WITH_OAUTH_SUPPORT
           url = open_id_redirect_url(req, oidreq, params["trust_root"], params["return_to"], params["method"])
           return redirect_to(url)
         rescue ::OpenID::OpenIDError, Timeout::Error => e
