@@ -17,13 +17,16 @@ Gem::Specification.new do |s|
      "README.rdoc"
   ]
   s.files = [
-    "LICENSE",
+    ".gitignore",
+     "LICENSE",
      "README.rdoc",
      "Rakefile",
+     "VERSION",
      "deps.rip",
      "dev-deps.rip",
      "lib/rack/openid.rb",
      "lib/rack/openid/simple_auth.rb",
+     "rack-openid.gemspec",
      "test/test_openid.rb"
   ]
   s.homepage = %q{http://github.com/nov/rack-openid}
