@@ -27,20 +27,12 @@ module Rack #:nodoc:
     #     #=> OpenID identifier="http://josh.openid.com/"
     def self.build_header(params = {})
       'OpenID ' + params.map { |key, value|
-        build_header_param(key, value)
-      }.join(', ')
-    end
-
-    def self.build_header_param(key, value)
-      if value.is_a?(Array)
-        "#{key}=\"#{value.join(',')}\""
-      elsif value.is_a?(Hash)
-        value.map do |k, v|
-          build_header_param("#{key}[#{k}]", v)
+        if value.is_a?(Array)
+          "#{key}=\"#{value.join(',')}\""
+        else
+          "#{key}=\"#{value}\""
         end
-      else
-        "#{key}=\"#{value}\""
-      end
+      }.join(', ')
     end
 
     # Helper method for parsing "WWW-Authenticate" header values into
@@ -57,14 +49,7 @@ module Rack #:nodoc:
           value = value.join('=')
           value.gsub!(/^\"/, '').gsub!(/\"$/, "")
           value = value.split(',')
-          parent_key, sub_key = key.scan(/^(.+)\[(.+)\]$/).flatten
-          _value_ = value.length > 1 ? value : value.first
-          if parent_key && sub_key
-            params[parent_key] ||= {}
-            params[parent_key][sub_key] = _value_
-          else
-            params[key] = _value_
-          end
+          params[key] = value.length > 1 ? value : value.first
         }
       end
       params
@@ -261,9 +246,9 @@ module Rack #:nodoc:
       end
 
       def add_oauth_fields(oidreq, fields)
-        return unless fields['oauth'] && fields['oauth']['consumer']
-        fields['oauth']['scope'] = Array(fields['oauth']['scope']).join(' ')
-        oauthreq = ::OpenID::OAuth::Request.new fields['oauth']['consumer'], fields['oauth']['scope']
+        return unless fields['oauth[consumer]'] && fields['oauth[consumer]']
+        fields['oauth[scope]'] = Array(fields['oauth[scope]']).join(' ')
+        oauthreq = ::OpenID::OAuth::Request.new fields['oauth[consumer]'], fields['oauth[scope]']
 
         oidreq.add_extension(oauthreq)
       end

@@ -96,43 +96,6 @@ class TestHeader < Test::Unit::TestCase
       Rack::OpenID.parse_header('Realm="Example"'))
   end
 
-  def test_build_header_with_deep_hash
-    header = Rack::OpenID.build_header(:identity => "http://example.com/", :oauth => {
-      :consumer => 'consumer_key', :scope => 'scope1'
-    })
-    assert_match(/OpenID /, header)
-    assert_match(/identity="http:\/\/example\.com\/"/, header)
-    assert_match(/oauth\[consumer\]="consumer_key"/, header)
-    assert_match(/oauth\[scope\]="scope1"/, header)
-
-    header = Rack::OpenID.build_header(:identity => "http://example.com/", :oauth => {
-      :consumer => 'consumer_key', :scope => 'scope1,scope2'
-    })
-    assert_match(/OpenID /, header)
-    assert_match(/identity="http:\/\/example\.com\/"/, header)
-    assert_match(/oauth\[consumer\]="consumer_key"/, header)
-    assert_match(/oauth\[scope\]="scope1,scope2"/, header)
-
-    header = Rack::OpenID.build_header(:identity => "http://example.com/", :oauth => {
-      :consumer => 'consumer_key', :scope => ['scope1', 'scope2']
-    })
-    assert_match(/OpenID /, header)
-    assert_match(/identity="http:\/\/example\.com\/"/, header)
-    assert_match(/oauth\[consumer\]="consumer_key"/, header)
-    assert_match(/oauth\[scope\]="scope1,scope2"/, header)
-  end
-
-  def test_parse_header_with_deep_hash
-    assert_equal(
-      {"identity" => "http://example.com/", "oauth" => {"consumer" => "consumer_key", "scope" => "scope1"}},
-      Rack::OpenID.parse_header('OpenID identity="http://example.com/", oauth[consumer]="consumer_key", oauth[scope]="scope1"')
-    )
-    assert_equal(
-      {"identity" => "http://example.com/", "oauth" => {"consumer" => "consumer_key", "scope" => ["scope1", "scope2"]}},
-      Rack::OpenID.parse_header('OpenID identity="http://example.com/", oauth[consumer]="consumer_key", oauth[scope]="scope1,scope2"')
-    )
-  end
-
 end
 
 module RackTestHelpers
@@ -241,7 +204,7 @@ class TestOpenID < Test::Unit::TestCase
 
   def test_with_oauth
     @app = app(
-      :oauth => {:consumer => 'consumer_key', :scope => 'scope1,scope2'}
+      :"oauth[consumer]" => 'consumer_key', :"oauth[scope]" => 'scope1,scope2'
     )
     process('/', :method => 'GET')
     follow_redirect!
