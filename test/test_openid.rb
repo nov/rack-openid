@@ -1,7 +1,6 @@
 require 'test/unit'
 require 'net/http'
 
-require 'rubygems'
 require 'rack'
 require 'rack/openid'
 require 'rack/openid/simple_auth'
