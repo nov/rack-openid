@@ -256,9 +256,8 @@ module Rack #:nodoc:
       end
 
       def add_oauth_fields(oidreq, fields)
-        if (consumer = fields['oauth[consumer]']) &&
-              (scope = fields['oauth[scope]'])
-          oauthreq = ::OpenID::OAuth::Request.new(consumer, Array(scope).join(' '))
+        if fields['oauth[consumer]']
+          oauthreq = ::OpenID::OAuth::Request.new(fields['oauth[consumer]'], Array(fields['oauth[scope]']).join(' '))
           oidreq.add_extension(oauthreq)
         end
       end
