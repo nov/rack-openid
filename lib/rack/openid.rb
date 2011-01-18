@@ -263,8 +263,8 @@ module Rack #:nodoc:
       end
 
       def add_ui_fields(oidreq, fields)
-        if fields['ui[mode]'] || fields['ui[lang]']
-          uireq = ::OpenID::UI::Request.new(fields['ui[mode]'], fields['ui[lang]'])
+        if fields['ui[mode]'] || fields['ui[icon]'] || fields['ui[lang]']
+          uireq = ::OpenID::UI::Request.new(fields['ui[mode]'], fields['ui[icon]'], fields['ui[lang]'])
           oidreq.add_extension(uireq)
         end
       end
